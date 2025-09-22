@@ -88,6 +88,9 @@ def run_crawler():
 
     driver = None
     is_success = False
+
+    env = os.getenv("EXECUTION_ENV", "local")
+    print(f"--- 실행 환경: {env} ---")
     try:
 
         # --- 1. 날짜 계산 ---
@@ -121,8 +124,26 @@ def run_crawler():
         }
         chrome_options.add_experimental_option("prefs", prefs)
 
+        if env == "production":
+            print("운영 환경으로 판단하여 RDS에 직접 접속합니다.(Headless 모드)")
+
+            # --- 서버 환경을 위한 옵션 추가 ---
+            chrome_options.add_argument("--headless")  # GUI 없이 백그라운드에서 실행
+            chrome_options.add_argument("--no-sandbox")  # Docker 컨테이너 환경에서 필수
+            chrome_options.add_argument("--disable-dev-shm-usage")  # 공유 메모리 관련 문제 방지
+            chrome_options.add_argument("--window-size=1920x1080")  # 창 크기 설정 (레이아웃 깨짐 방지)
+            chrome_options.add_argument("--disable-gpu")  # <<< 개선 제안 2
+            chrome_options.add_argument("--lang=ko_KR")  # <<< 개선 제안 2
+            chrome_options.add_argument(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36")  # 일반적인 사용자처럼 보이게 설정
+        else:
+            print("로컬 환경으로 드라이버 옵션을 설정합니다.")
+
         driver = webdriver.Chrome(options=chrome_options)
-        driver.maximize_window()
+
+        if env != "production":
+            driver.maximize_window()
+
         driver.set_page_load_timeout(60)
         url = "https://www.nongnet.or.kr/qlik/sso/single/?appid=551d7860-2a5d-49e5-915e-56517f3da2a3&sheet=d89143e2-368a-4d41-9851-d4f58ce060dc"
         wait = WebDriverWait(driver, 30)
